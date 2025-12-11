@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SandPix Invoicing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              sand: {
+                50: '#fdfbf7',
+                100: '#fbf7ef',
+                200: '#f5ebd7',
+                300: '#edd9b5',
+                400: '#e3c08c',
+                500: '#daa566',
+                600: '#ce8b4e',
+                700: '#ab6e3f',
+                800: '#8c5838',
+                900: '#714830',
+              },
+              maldives: {
+                50: '#f0fdfd',
+                100: '#e0fbfc',
+                200: '#bdf6f9',
+                300: '#8aeef4',
+                400: '#4de0eb',
+                500: '#23c4d3',
+                600: '#199ead',
+                700: '#1a7f8c',
+                800: '#1d6671',
+                900: '#1d545e',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f3f4f6;
+      }
+      .print-hide {
+        display: block;
+      }
+      @media print {
+        .print-hide {
+          display: none !important;
+        }
+        .print-show {
+          display: block !important;
+        }
+        body {
+          background-color: white;
+        }
+        @page {
+          margin: 0;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
+    "react/": "https://esm.sh/react@^19.2.1/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "lucide-react": "https://esm.sh/lucide-react@^0.560.0",
+    "recharts": "https://esm.sh/recharts@^3.5.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
