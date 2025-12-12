@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import InvoiceEditor from './components/InvoiceEditor';
 import InvoiceView from './components/InvoiceView';
+import InvoiceList from './components/InvoiceList';
 import CustomerList from './components/CustomerList';
 import CustomerEditor from './components/CustomerEditor';
 import SettingsEditor from './components/SettingsEditor';
+import Reports from './components/Reports';
 import { Invoice, InvoiceStatus, ViewConfig, Customer, Settings } from './types';
-import { Layout, Users, Settings as SettingsIcon } from 'lucide-react';
+import { Layout, Users, Settings as SettingsIcon, FileText, BarChart3 } from 'lucide-react';
 
 const INVOICE_STORAGE_KEY = 'sandpix_invoices';
 const CUSTOMER_STORAGE_KEY = 'sandpix_customers';
@@ -100,6 +102,10 @@ const App: React.FC = () => {
     setViewConfig({ view: 'view', invoiceId: invoice.id });
   };
 
+  const handleDeleteInvoice = (id: string) => {
+    setInvoices(prev => prev.filter(i => i.id !== id));
+  };
+
   const handleSaveCustomer = (customer: Customer) => {
     setCustomers(prev => {
       const exists = prev.find(c => c.id === customer.id);
@@ -146,12 +152,30 @@ const App: React.FC = () => {
           </button>
 
           <button 
+            onClick={() => setViewConfig({ view: 'invoices' })}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
+              viewConfig.view === 'invoices' || viewConfig.view === 'view' && !viewConfig.customerId ? 'bg-gray-800 text-maldives-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            }`}
+          >
+            <FileText size={18} /> Invoices
+          </button>
+
+          <button 
             onClick={() => setViewConfig({ view: 'customers' })}
             className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
               ['customers', 'create-customer', 'edit-customer'].includes(viewConfig.view) ? 'bg-gray-800 text-maldives-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'
             }`}
           >
             <Users size={18} /> Customers
+          </button>
+
+          <button 
+            onClick={() => setViewConfig({ view: 'reports' })}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
+              viewConfig.view === 'reports' ? 'bg-gray-800 text-maldives-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            }`}
+          >
+            <BarChart3 size={18} /> Reports
           </button>
 
           <button 
@@ -188,6 +212,14 @@ const App: React.FC = () => {
             <Dashboard invoices={invoices} setView={setViewConfig} />
           )}
 
+          {viewConfig.view === 'invoices' && (
+            <InvoiceList 
+              invoices={invoices} 
+              setView={setViewConfig} 
+              onDelete={handleDeleteInvoice} 
+            />
+          )}
+
           {viewConfig.view === 'create' && (
             <InvoiceEditor 
               onSave={handleSaveInvoice}
@@ -209,9 +241,13 @@ const App: React.FC = () => {
             <InvoiceView 
               invoice={currentInvoice}
               settings={settings}
-              onBack={() => setViewConfig({ view: 'dashboard' })}
+              onBack={() => setViewConfig({ view: 'invoices' })}
               onEdit={() => setViewConfig({ view: 'edit', invoiceId: currentInvoice.id })}
             />
+          )}
+
+          {viewConfig.view === 'reports' && (
+            <Reports invoices={invoices} />
           )}
 
           {viewConfig.view === 'customers' && (

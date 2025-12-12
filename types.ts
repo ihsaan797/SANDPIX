@@ -47,7 +47,7 @@ export interface Settings {
   logoUrl?: string;
 }
 
-export type ViewState = 'dashboard' | 'create' | 'edit' | 'view' | 'customers' | 'create-customer' | 'edit-customer' | 'settings';
+export type ViewState = 'dashboard' | 'invoices' | 'create' | 'edit' | 'view' | 'customers' | 'create-customer' | 'edit-customer' | 'settings' | 'reports';
 
 export interface ViewConfig {
   view: ViewState;
