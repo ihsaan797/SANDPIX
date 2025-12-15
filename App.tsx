@@ -7,16 +7,17 @@ import CustomerList from './components/CustomerList';
 import CustomerEditor from './components/CustomerEditor';
 import SettingsEditor from './components/SettingsEditor';
 import Reports from './components/Reports';
-import { Invoice, InvoiceStatus, ViewConfig, Customer, Settings } from './types';
-import { Layout, Users, Settings as SettingsIcon, FileText, BarChart3 } from 'lucide-react';
-
-const INVOICE_STORAGE_KEY = 'sandpix_invoices';
-const CUSTOMER_STORAGE_KEY = 'sandpix_customers';
-const SETTINGS_STORAGE_KEY = 'sandpix_settings';
+import UserList from './components/UserList';
+import UserEditor from './components/UserEditor';
+import { Invoice, InvoiceStatus, ViewConfig, Customer, Settings, User, UserRole } from './types';
+import { Layout, Users, Settings as SettingsIcon, FileText, BarChart3, Shield, Loader2 } from 'lucide-react';
+import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
+  const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [settings, setSettings] = useState<Settings>({
     businessName: 'SANDPIX MALDIVES',
     businessSubtitle: '',
@@ -27,70 +28,59 @@ const App: React.FC = () => {
   });
   const [viewConfig, setViewConfig] = useState<ViewConfig>({ view: 'dashboard' });
 
-  // Load from local storage on mount
+  // Load data from Supabase on mount
   useEffect(() => {
-    const savedInvoices = localStorage.getItem(INVOICE_STORAGE_KEY);
-    if (savedInvoices) {
-      setInvoices(JSON.parse(savedInvoices));
-    } else {
-      // Dummy data for first run
-      setInvoices([
-        {
-          id: '1',
-          invoiceNumber: 'INV-2024-001',
-          clientName: 'Coco Bodu Hithi',
-          clientEmail: 'billing@cococollection.com',
-          date: '2024-05-10',
-          dueDate: '2024-05-24',
-          items: [
-            { id: 'a1', description: 'Drone Videography - Sunset Villa', quantity: 2, rate: 4500 },
-            { id: 'a2', description: 'Photo Editing Service', quantity: 1, rate: 3000 }
-          ],
-          subtotal: 12000,
-          tax: 960,
-          total: 12960,
-          status: InvoiceStatus.PAID
-        }
-      ]);
-    }
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        console.log("Fetching data from Supabase...");
+        
+        // Fetch Invoices
+        const { data: invoicesData, error: invError } = await supabase
+          .from('invoices')
+          .select('*');
+        if (invError) console.error('Error fetching invoices:', JSON.stringify(invError, null, 2));
+        else if (invoicesData) setInvoices(invoicesData);
 
-    const savedCustomers = localStorage.getItem(CUSTOMER_STORAGE_KEY);
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
-    } else {
-      // Dummy customers
-      setCustomers([
-        {
-          id: 'c1',
-          name: 'Ahmed Niyaz',
-          companyName: 'Soneva Jani',
-          email: 'ahmed@soneva.com',
-          phone: '+960 7771234',
-          address: 'Medhufaru Island, Noonu Atoll'
-        }
-      ]);
-    }
+        // Fetch Customers
+        const { data: customersData, error: custError } = await supabase
+          .from('customers')
+          .select('*');
+        if (custError) console.error('Error fetching customers:', JSON.stringify(custError, null, 2));
+        else if (customersData) setCustomers(customersData);
 
-    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
-    }
+        // Fetch Users
+        const { data: usersData, error: userError } = await supabase
+          .from('users')
+          .select('*');
+        if (userError) console.error('Error fetching users:', JSON.stringify(userError, null, 2));
+        else if (usersData) setUsers(usersData);
+
+        // Fetch Settings (Single Row)
+        const { data: settingsData, error: setError } = await supabase
+          .from('settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle(); // Use maybeSingle to avoid error if table is empty
+        
+        if (setError) {
+           console.error('Error fetching settings:', JSON.stringify(setError, null, 2));
+        } else if (settingsData) {
+           // Remove database specific fields if any, though interface match should handle it
+           setSettings(settingsData);
+        }
+      } catch (error) {
+        console.error('Unexpected error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // Save to local storage on change
-  useEffect(() => {
-    localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(invoices));
-  }, [invoices]);
-
-  useEffect(() => {
-    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
-
-  const handleSaveInvoice = (invoice: Invoice) => {
+  const handleSaveInvoice = async (invoice: Invoice) => {
+    // Optimistic Update
     setInvoices(prev => {
       const exists = prev.find(i => i.id === invoice.id);
       if (exists) {
@@ -100,13 +90,28 @@ const App: React.FC = () => {
       }
     });
     setViewConfig({ view: 'view', invoiceId: invoice.id });
+
+    // Supabase
+    const { error } = await supabase.from('invoices').upsert(invoice);
+    if (error) {
+      console.error('Error saving invoice:', JSON.stringify(error, null, 2));
+      alert('Failed to save invoice to cloud. Please check connection.');
+    }
   };
 
-  const handleDeleteInvoice = (id: string) => {
+  const handleDeleteInvoice = async (id: string) => {
+    // Optimistic Update
     setInvoices(prev => prev.filter(i => i.id !== id));
+    
+    // Supabase
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting invoice:', JSON.stringify(error, null, 2));
+    }
   };
 
-  const handleSaveCustomer = (customer: Customer) => {
+  const handleSaveCustomer = async (customer: Customer) => {
+    // Optimistic Update
     setCustomers(prev => {
       const exists = prev.find(c => c.id === customer.id);
       if (exists) {
@@ -116,10 +121,55 @@ const App: React.FC = () => {
       }
     });
     setViewConfig({ view: 'customers' });
+
+    // Supabase
+    const { error } = await supabase.from('customers').upsert(customer);
+    if (error) {
+       console.error('Error saving customer:', JSON.stringify(error, null, 2));
+       alert('Failed to save customer to cloud.');
+    }
   };
 
-  const handleDeleteCustomer = (id: string) => {
+  const handleDeleteCustomer = async (id: string) => {
     setCustomers(prev => prev.filter(c => c.id !== id));
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) console.error('Error deleting customer:', JSON.stringify(error, null, 2));
+  };
+
+  const handleSaveUser = async (user: User) => {
+    setUsers(prev => {
+      const exists = prev.find(u => u.id === user.id);
+      if (exists) {
+        return prev.map(u => u.id === user.id ? user : u);
+      } else {
+        return [...prev, user];
+      }
+    });
+    setViewConfig({ view: 'users' });
+
+    const { error } = await supabase.from('users').upsert(user);
+    if (error) {
+      console.error('Error saving user:', JSON.stringify(error, null, 2));
+      alert('Failed to save user.');
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    setUsers(prev => prev.filter(u => u.id !== id));
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) console.error('Error deleting user:', JSON.stringify(error, null, 2));
+  };
+
+  const handleSaveSettings = async (newSettings: Settings) => {
+    setSettings(newSettings);
+    // Force ID 1 to maintain singleton nature in DB
+    const settingsPayload = { ...newSettings, id: 1 }; 
+    const { error } = await supabase.from('settings').upsert(settingsPayload);
+    
+    if (error) {
+      console.error('Error saving settings:', JSON.stringify(error, null, 2));
+      alert('Failed to save settings.');
+    }
   };
 
   const currentInvoice = viewConfig.invoiceId 
@@ -129,6 +179,21 @@ const App: React.FC = () => {
   const currentCustomer = viewConfig.customerId
     ? customers.find(c => c.id === viewConfig.customerId)
     : undefined;
+
+  const currentUser = viewConfig.userId
+    ? users.find(u => u.id === viewConfig.userId)
+    : undefined;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 size={48} className="animate-spin text-maldives-600 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Loading your business data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -176,6 +241,15 @@ const App: React.FC = () => {
             }`}
           >
             <BarChart3 size={18} /> Reports
+          </button>
+
+          <button 
+            onClick={() => setViewConfig({ view: 'users' })}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
+              ['users', 'create-user', 'edit-user'].includes(viewConfig.view) ? 'bg-gray-800 text-maldives-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            }`}
+          >
+            <Shield size={18} /> Users
           </button>
 
           <button 
@@ -250,6 +324,29 @@ const App: React.FC = () => {
             <Reports invoices={invoices} />
           )}
 
+          {viewConfig.view === 'users' && (
+            <UserList 
+              users={users}
+              setView={setViewConfig}
+              onDelete={handleDeleteUser}
+            />
+          )}
+
+          {viewConfig.view === 'create-user' && (
+             <UserEditor 
+              onSave={handleSaveUser}
+              onCancel={() => setViewConfig({ view: 'users' })}
+            />
+          )}
+
+          {viewConfig.view === 'edit-user' && currentUser && (
+             <UserEditor 
+              user={currentUser}
+              onSave={handleSaveUser}
+              onCancel={() => setViewConfig({ view: 'users' })}
+            />
+          )}
+
           {viewConfig.view === 'customers' && (
             <CustomerList 
               customers={customers}
@@ -276,7 +373,7 @@ const App: React.FC = () => {
           {viewConfig.view === 'settings' && (
             <SettingsEditor 
               settings={settings}
-              onSave={setSettings}
+              onSave={handleSaveSettings}
             />
           )}
         </div>
