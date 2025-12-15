@@ -39,21 +39,21 @@ const App: React.FC = () => {
         const { data: invoicesData, error: invError } = await supabase
           .from('invoices')
           .select('*');
-        if (invError) console.error('Error fetching invoices:', JSON.stringify(invError, null, 2));
+        if (invError) console.error('Error fetching invoices:', invError);
         else if (invoicesData) setInvoices(invoicesData);
 
         // Fetch Customers
         const { data: customersData, error: custError } = await supabase
           .from('customers')
           .select('*');
-        if (custError) console.error('Error fetching customers:', JSON.stringify(custError, null, 2));
+        if (custError) console.error('Error fetching customers:', custError);
         else if (customersData) setCustomers(customersData);
 
         // Fetch Users
         const { data: usersData, error: userError } = await supabase
           .from('users')
           .select('*');
-        if (userError) console.error('Error fetching users:', JSON.stringify(userError, null, 2));
+        if (userError) console.error('Error fetching users:', userError);
         else if (usersData) setUsers(usersData);
 
         // Fetch Settings (Single Row)
@@ -64,7 +64,7 @@ const App: React.FC = () => {
           .maybeSingle(); // Use maybeSingle to avoid error if table is empty
         
         if (setError) {
-           console.error('Error fetching settings:', JSON.stringify(setError, null, 2));
+           console.error('Error fetching settings:', setError);
         } else if (settingsData) {
            // Remove database specific fields if any, though interface match should handle it
            setSettings(settingsData);
@@ -94,7 +94,7 @@ const App: React.FC = () => {
     // Supabase
     const { error } = await supabase.from('invoices').upsert(invoice);
     if (error) {
-      console.error('Error saving invoice:', JSON.stringify(error, null, 2));
+      console.error('Error saving invoice:', error);
       alert('Failed to save invoice to cloud. Please check connection.');
     }
   };
@@ -106,7 +106,7 @@ const App: React.FC = () => {
     // Supabase
     const { error } = await supabase.from('invoices').delete().eq('id', id);
     if (error) {
-      console.error('Error deleting invoice:', JSON.stringify(error, null, 2));
+      console.error('Error deleting invoice:', error);
     }
   };
 
@@ -125,7 +125,7 @@ const App: React.FC = () => {
     // Supabase
     const { error } = await supabase.from('customers').upsert(customer);
     if (error) {
-       console.error('Error saving customer:', JSON.stringify(error, null, 2));
+       console.error('Error saving customer:', error);
        alert('Failed to save customer to cloud.');
     }
   };
@@ -133,7 +133,7 @@ const App: React.FC = () => {
   const handleDeleteCustomer = async (id: string) => {
     setCustomers(prev => prev.filter(c => c.id !== id));
     const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) console.error('Error deleting customer:', JSON.stringify(error, null, 2));
+    if (error) console.error('Error deleting customer:', error);
   };
 
   const handleSaveUser = async (user: User) => {
@@ -149,7 +149,7 @@ const App: React.FC = () => {
 
     const { error } = await supabase.from('users').upsert(user);
     if (error) {
-      console.error('Error saving user:', JSON.stringify(error, null, 2));
+      console.error('Error saving user:', error);
       alert('Failed to save user.');
     }
   };
@@ -157,7 +157,7 @@ const App: React.FC = () => {
   const handleDeleteUser = async (id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
     const { error } = await supabase.from('users').delete().eq('id', id);
-    if (error) console.error('Error deleting user:', JSON.stringify(error, null, 2));
+    if (error) console.error('Error deleting user:', error);
   };
 
   const handleSaveSettings = async (newSettings: Settings) => {
@@ -167,7 +167,7 @@ const App: React.FC = () => {
     const { error } = await supabase.from('settings').upsert(settingsPayload);
     
     if (error) {
-      console.error('Error saving settings:', JSON.stringify(error, null, 2));
+      console.error('Error saving settings:', error);
       alert('Failed to save settings.');
     }
   };
