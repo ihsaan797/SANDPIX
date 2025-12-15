@@ -9,9 +9,8 @@ import SettingsEditor from './components/SettingsEditor';
 import Reports from './components/Reports';
 import UserList from './components/UserList';
 import UserEditor from './components/UserEditor';
-import { Invoice, InvoiceStatus, ViewConfig, Customer, Settings, User, UserRole } from './types';
+import { Invoice, ViewConfig, Customer, Settings, User } from './types';
 import { Layout, Users, Settings as SettingsIcon, FileText, BarChart3, Shield, Loader2 } from 'lucide-react';
-import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -28,148 +27,95 @@ const App: React.FC = () => {
   });
   const [viewConfig, setViewConfig] = useState<ViewConfig>({ view: 'dashboard' });
 
-  // Load data from Supabase on mount
+  // Load data from LocalStorage on mount
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const loadLocalData = () => {
       try {
-        console.log("Fetching data from Supabase...");
-        
-        // Fetch Invoices
-        const { data: invoicesData, error: invError } = await supabase
-          .from('invoices')
-          .select('*');
-        if (invError) console.error('Error fetching invoices:', invError);
-        else if (invoicesData) setInvoices(invoicesData);
+        const localInvoices = localStorage.getItem('sandpix_invoices');
+        const localCustomers = localStorage.getItem('sandpix_customers');
+        const localUsers = localStorage.getItem('sandpix_users');
+        const localSettings = localStorage.getItem('sandpix_settings');
 
-        // Fetch Customers
-        const { data: customersData, error: custError } = await supabase
-          .from('customers')
-          .select('*');
-        if (custError) console.error('Error fetching customers:', custError);
-        else if (customersData) setCustomers(customersData);
-
-        // Fetch Users
-        const { data: usersData, error: userError } = await supabase
-          .from('users')
-          .select('*');
-        if (userError) console.error('Error fetching users:', userError);
-        else if (usersData) setUsers(usersData);
-
-        // Fetch Settings (Single Row)
-        const { data: settingsData, error: setError } = await supabase
-          .from('settings')
-          .select('*')
-          .limit(1)
-          .maybeSingle(); // Use maybeSingle to avoid error if table is empty
-        
-        if (setError) {
-           console.error('Error fetching settings:', setError);
-        } else if (settingsData) {
-           // Remove database specific fields if any, though interface match should handle it
-           setSettings(settingsData);
-        }
-      } catch (error) {
-        console.error('Unexpected error fetching data:', error);
+        if (localInvoices) setInvoices(JSON.parse(localInvoices));
+        if (localCustomers) setCustomers(JSON.parse(localCustomers));
+        if (localUsers) setUsers(JSON.parse(localUsers));
+        if (localSettings) setSettings(JSON.parse(localSettings));
+      } catch (e) {
+        console.error("Error loading local data", e);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
+    
+    loadLocalData();
   }, []);
 
-  const handleSaveInvoice = async (invoice: Invoice) => {
-    // Optimistic Update
-    setInvoices(prev => {
-      const exists = prev.find(i => i.id === invoice.id);
-      if (exists) {
-        return prev.map(i => i.id === invoice.id ? invoice : i);
-      } else {
-        return [invoice, ...prev];
-      }
-    });
+  const handleSaveInvoice = (invoice: Invoice) => {
+    const exists = invoices.find(i => i.id === invoice.id);
+    let updatedInvoices: Invoice[];
+    
+    if (exists) {
+      updatedInvoices = invoices.map(i => i.id === invoice.id ? invoice : i);
+    } else {
+      updatedInvoices = [invoice, ...invoices];
+    }
+    
+    setInvoices(updatedInvoices);
+    localStorage.setItem('sandpix_invoices', JSON.stringify(updatedInvoices));
     setViewConfig({ view: 'view', invoiceId: invoice.id });
-
-    // Supabase
-    const { error } = await supabase.from('invoices').upsert(invoice);
-    if (error) {
-      console.error('Error saving invoice:', error);
-      alert('Failed to save invoice to cloud. Please check connection.');
-    }
   };
 
-  const handleDeleteInvoice = async (id: string) => {
-    // Optimistic Update
-    setInvoices(prev => prev.filter(i => i.id !== id));
-    
-    // Supabase
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting invoice:', error);
-    }
+  const handleDeleteInvoice = (id: string) => {
+    const updatedInvoices = invoices.filter(i => i.id !== id);
+    setInvoices(updatedInvoices);
+    localStorage.setItem('sandpix_invoices', JSON.stringify(updatedInvoices));
   };
 
-  const handleSaveCustomer = async (customer: Customer) => {
-    // Optimistic Update
-    setCustomers(prev => {
-      const exists = prev.find(c => c.id === customer.id);
-      if (exists) {
-        return prev.map(c => c.id === customer.id ? customer : c);
-      } else {
-        return [...prev, customer];
-      }
-    });
+  const handleSaveCustomer = (customer: Customer) => {
+    const exists = customers.find(c => c.id === customer.id);
+    let updatedCustomers: Customer[];
+
+    if (exists) {
+      updatedCustomers = customers.map(c => c.id === customer.id ? customer : c);
+    } else {
+      updatedCustomers = [...customers, customer];
+    }
+
+    setCustomers(updatedCustomers);
+    localStorage.setItem('sandpix_customers', JSON.stringify(updatedCustomers));
     setViewConfig({ view: 'customers' });
+  };
 
-    // Supabase
-    const { error } = await supabase.from('customers').upsert(customer);
-    if (error) {
-       console.error('Error saving customer:', error);
-       alert('Failed to save customer to cloud.');
+  const handleDeleteCustomer = (id: string) => {
+    const updatedCustomers = customers.filter(c => c.id !== id);
+    setCustomers(updatedCustomers);
+    localStorage.setItem('sandpix_customers', JSON.stringify(updatedCustomers));
+  };
+
+  const handleSaveUser = (user: User) => {
+    const exists = users.find(u => u.id === user.id);
+    let updatedUsers: User[];
+
+    if (exists) {
+      updatedUsers = users.map(u => u.id === user.id ? user : u);
+    } else {
+      updatedUsers = [...users, user];
     }
-  };
 
-  const handleDeleteCustomer = async (id: string) => {
-    setCustomers(prev => prev.filter(c => c.id !== id));
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) console.error('Error deleting customer:', error);
-  };
-
-  const handleSaveUser = async (user: User) => {
-    setUsers(prev => {
-      const exists = prev.find(u => u.id === user.id);
-      if (exists) {
-        return prev.map(u => u.id === user.id ? user : u);
-      } else {
-        return [...prev, user];
-      }
-    });
+    setUsers(updatedUsers);
+    localStorage.setItem('sandpix_users', JSON.stringify(updatedUsers));
     setViewConfig({ view: 'users' });
-
-    const { error } = await supabase.from('users').upsert(user);
-    if (error) {
-      console.error('Error saving user:', error);
-      alert('Failed to save user.');
-    }
   };
 
-  const handleDeleteUser = async (id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    if (error) console.error('Error deleting user:', error);
+  const handleDeleteUser = (id: string) => {
+    const updatedUsers = users.filter(u => u.id !== id);
+    setUsers(updatedUsers);
+    localStorage.setItem('sandpix_users', JSON.stringify(updatedUsers));
   };
 
-  const handleSaveSettings = async (newSettings: Settings) => {
+  const handleSaveSettings = (newSettings: Settings) => {
     setSettings(newSettings);
-    // Force ID 1 to maintain singleton nature in DB
-    const settingsPayload = { ...newSettings, id: 1 }; 
-    const { error } = await supabase.from('settings').upsert(settingsPayload);
-    
-    if (error) {
-      console.error('Error saving settings:', error);
-      alert('Failed to save settings.');
-    }
+    localStorage.setItem('sandpix_settings', JSON.stringify(newSettings));
   };
 
   const currentInvoice = viewConfig.invoiceId 
